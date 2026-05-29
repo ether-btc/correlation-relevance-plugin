@@ -138,9 +138,42 @@ memory:
 ## Development
 
 ```bash
+# Install with dev dependencies (ruff + pytest)
 pip install -e ".[dev]"
+
+# Run tests
 python -m pytest tests/ -v
+
+# Lint
+ruff check .
+
+# Install with Hermes support (for live integration)
+pip install -e ".[hermes]"
 ```
+
+## Deployment — Hermes Agent
+
+Deploy this as a Hermes memory provider plugin:
+
+```bash
+# Link the plugin into Hermes
+ln -sf /path/to/correlation-relevance-plugin/correlation_lib_adapters/hermes \
+  ~/.hermes/plugins/correlation
+
+# Add to ~/.hermes/config.yaml:
+# memory:
+#   provider: correlation
+#   correlation:
+#     rule_file: ~/.hermes/correlation-rules.json
+#     watch_enabled: false
+#     db_path: ~/.hermes/correlation-effectiveness.db
+```
+
+Restart Hermes Agent — the correlation engine will prefetch related context automatically on matched tasks.
+
+## Migrating from OpenClaw
+
+See [UPSTREAM.md](./UPSTREAM.md) for the OpenClaw→Hermes porting guide.
 
 ## License
 

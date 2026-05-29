@@ -12,7 +12,7 @@ import logging
 import re
 from typing import TYPE_CHECKING, Any
 
-from correlation_lib.interfaces import RecallBackend, ContextBackend
+from correlation_lib.interfaces import ContextBackend, RecallBackend
 
 if TYPE_CHECKING:
     from mnemosyne import Mnemosyne
@@ -42,10 +42,10 @@ class HermesRecallBackend(RecallBackend):
     working memory and episodic memory.
     """
 
-    def __init__(self, mnemosyne: Mnemosyne | None = None) -> None:
+    def __init__(self, mnemosyne: "Mnemosyne | None" = None) -> None:
         self._mnemosyne = mnemosyne
 
-    def set_mnemosyne(self, mnemosyne: Mnemosyne) -> None:
+    def set_mnemosyne(self, mnemosyne: "Mnemosyne") -> None:
         object.__setattr__(self, "_mnemosyne", mnemosyne)
 
     def fetch(self, path: str) -> str | None:
@@ -54,7 +54,7 @@ class HermesRecallBackend(RecallBackend):
         Returns the best recall result as a formatted string, or None.
         """
         if self._mnemosyne is None:
-            logger.warning("HermesRecallBackend: no Mnemosyne instance — cannot fetch %r", path)
+            logger.debug("HermesRecallBackend: no Mnemosyne instance — skipping fetch %r", path)
             return None
 
         query = _path_to_query(path)

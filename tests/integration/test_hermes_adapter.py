@@ -5,14 +5,19 @@ This test validates that the Hermes adapter works correctly without requiring
 a full Hermes Agent installation. It mocks the MemoryProvider interface and
 simulates the Hermes lifecycle hooks.
 """
+from __future__ import annotations
 
-import json
+import json  # noqa: E402
+import sys  # noqa: E402
 import tempfile
 from pathlib import Path
 
 import yaml
 
 # Mock Hermes Agent dependencies
+# MUST be set up before importing CorrelationMemoryProvider
+
+
 class MockMemoryProvider:
     """Mock base class for MemoryProvider."""
     name = "mock"
@@ -41,8 +46,6 @@ class MockMemoryProvider:
     def get_config_schema(self) -> list:
         return []
 
-# Patch MemoryProvider in sys.modules before importing the adapter
-import sys
 
 # Create a proper module hierarchy
 hermes_agent = type(sys)('hermes_agent')
@@ -64,7 +67,8 @@ sys.modules['hermes_agent.agent.memory_provider'] = memory_provider_module
 sys.modules['hermes_agent.hermes_constants'] = hermes_constants
 
 # Now import the adapter
-from correlation_lib_adapters.hermes import CorrelationMemoryProvider
+from correlation_lib_adapters.hermes import CorrelationMemoryProvider  # noqa: E402
+
 
 def test_memory_provider_basic():
     """Test basic MemoryProvider lifecycle."""

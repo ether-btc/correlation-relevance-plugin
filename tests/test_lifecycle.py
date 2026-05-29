@@ -1,14 +1,13 @@
 """Tests for correlation_lib.lifecycle."""
 
-import pytest
 
-from correlation_lib.rules import CorrelationRule, LifecycleState
 from correlation_lib.lifecycle import (
-    LifecycleManager,
-    AUTO_PROMOTE_FIRE_THRESHOLD,
     AUTO_DEMOTE_FIRE_THRESHOLD,
     AUTO_PROMOTE_EFFECTIVENESS_RATIO,
+    AUTO_PROMOTE_FIRE_THRESHOLD,
+    LifecycleManager,
 )
+from correlation_lib.rules import CorrelationRule, LifecycleState
 
 
 def make_rule(id: str, state: LifecycleState, confidence: float = 0.95) -> CorrelationRule:

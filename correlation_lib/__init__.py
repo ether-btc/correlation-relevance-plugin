@@ -17,22 +17,31 @@ Example:
         result = engine.enricher.on_task_start(user_message)
 """
 
+from correlation_lib.diagnostics import correlation_diagnostics, dump_diagnostics
 from correlation_lib.engine import CorrelationEngine, create_engine
+from correlation_lib.enricher import Enricher, EnrichmentResult
+from correlation_lib.interfaces import (
+    ContextBackend,
+    EffectivenessStore,
+    RecallBackend,
+    RuleProvider,
+)
+from correlation_lib.lifecycle import LifecycleManager, LifecycleTransition
+from correlation_lib.matcher import Matcher, MatchResult, get_fired_rules
+from correlation_lib.rule_provider import FileRuleProvider
 from correlation_lib.rules import (
     CorrelationRule,
-    RuleSet,
     LifecycleState,
     MatchMode,
+    RuleSet,
     load_rules_from_file,
     load_rules_from_json,
 )
-from correlation_lib.matcher import Matcher, MatchResult, get_fired_rules
-from correlation_lib.enricher import Enricher, EnrichmentResult
-from correlation_lib.tracker import EffectivenessTracker, SQLiteEffectivenessStore, RuleStats
-from correlation_lib.lifecycle import LifecycleManager, LifecycleTransition
-from correlation_lib.rule_provider import FileRuleProvider
-from correlation_lib.interfaces import RecallBackend, ContextBackend, RuleProvider, EffectivenessStore
-from correlation_lib.diagnostics import correlation_diagnostics, dump_diagnostics
+from correlation_lib.tracker import (
+    EffectivenessTracker,
+    RuleStats,
+    SQLiteEffectivenessStore,
+)
 
 __all__ = [
     # Engine

@@ -10,15 +10,10 @@ Run: python examples/demo.py
 from pathlib import Path
 
 from correlation_lib import (
-    create_engine,
     Enricher,
-    RuleSet,
-    CorrelationRule,
-    LifecycleState,
-    MatchMode,
+    create_engine,
 )
-from correlation_lib.interfaces import RecallBackend, ContextBackend
-
+from correlation_lib.interfaces import ContextBackend, RecallBackend
 
 # --------------------------------------------------------------------------- #
 # Mock backends (replace with HermesRecallBackend / HermesContextBackend)

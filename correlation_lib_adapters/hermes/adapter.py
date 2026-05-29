@@ -17,18 +17,29 @@ from __future__ import annotations
 import logging
 import os
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
-from hermes_agent.agent.memory_provider import MemoryProvider
+if TYPE_CHECKING:
+    from agent.memory_provider import MemoryProvider
+else:
+    # Runtime import — 'agent' is available when Hermes loads this as a plugin.
+    # Tests that import without hermes-agent must mock MemoryProvider directly.
+    try:
+        from agent.memory_provider import MemoryProvider
+    except ImportError:
+        # hermes-agent not installed — use a stub base for type-checking only.
+        # Subclass must override all abstract methods in this case.
+        class MemoryProvider:  # type: ignore[no-redef]
+            pass
 
 from correlation_lib import (
-    create_engine,
     Enricher,
-    EffectivenessTracker,
-    RuleSet,
+    create_engine,
 )
-from correlation_lib_adapters.hermes.backends import HermesRecallBackend, HermesContextBackend
-
+from correlation_lib_adapters.hermes.backends import (
+    HermesContextBackend,
+    HermesRecallBackend,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +61,9 @@ class CorrelationMemoryProvider(MemoryProvider):
       db_path: str            # SQLite effectiveness DB path (default: ~/.hermes/correlation-effectiveness.db)
     """
 
-    name = "correlation"
+    @property
+    def name(self) -> str:
+        return "correlation"
 
     def __init__(self) -> None:
         self._engine = None
@@ -70,7 +83,11 @@ class CorrelationMemoryProvider(MemoryProvider):
 
         Reads config from memory.provider.correlation in ~/.hermes/config.yaml.
         """
-        from hermes_agent.hermes_constants import get_hermes_home
+        try:
+            from hermes_constants import get_hermes_home
+        except ImportError:
+            def get_hermes_home() -> Path:
+                return Path.home()
 
         hermes_home = kwargs.get("hermes_home") or str(get_hermes_home())
 
@@ -188,6 +205,14 @@ class CorrelationMemoryProvider(MemoryProvider):
         """Clean shutdown."""
         self._context.clear()
         self._engine = None
+
+    def get_tool_schemas(self) -> list:
+        """Return no tool schemas — correlation is a context-only provider."""
+        return []
+
+    def handle_tool_call(self, tool_name: str, args, **kwargs):
+        """No tools to handle."""
+        return None
 
     def get_config_schema(self) -> list[dict[str, Any]]:
         return [

@@ -10,8 +10,7 @@ import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from correlation_lib.rules import LifecycleState, CorrelationRule
-
+from correlation_lib.rules import CorrelationRule, LifecycleState
 
 logger = logging.getLogger(__name__)
 

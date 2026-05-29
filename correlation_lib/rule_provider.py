@@ -7,13 +7,10 @@ When enabled, uses mtime polling to detect changes.
 from __future__ import annotations
 
 import logging
-import os
-import time
 from pathlib import Path
 
 from correlation_lib.interfaces import RuleProvider
 from correlation_lib.rules import RuleSet, load_rules_from_file
-
 
 logger = logging.getLogger(__name__)
 

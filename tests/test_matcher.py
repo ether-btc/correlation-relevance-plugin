@@ -2,8 +2,12 @@
 
 import pytest
 
-from correlation_lib.rules import CorrelationRule, MatchMode, RuleSet, LifecycleState
-from correlation_lib.matcher import Matcher, MatchResult, filter_high_confidence, get_fired_rules
+from correlation_lib.matcher import (
+    Matcher,
+    filter_high_confidence,
+    get_fired_rules,
+)
+from correlation_lib.rules import CorrelationRule, LifecycleState, MatchMode, RuleSet
 
 
 def make_rule(

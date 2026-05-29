@@ -9,13 +9,11 @@ from __future__ import annotations
 import logging
 import os
 import sys
-from pathlib import Path
 from typing import Any
 
+from correlation_lib.rule_provider import FileRuleProvider
 from correlation_lib.rules import RuleSet
 from correlation_lib.tracker import EffectivenessTracker
-from correlation_lib.rule_provider import FileRuleProvider
-
 
 logger = logging.getLogger(__name__)
 

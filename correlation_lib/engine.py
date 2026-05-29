@@ -10,13 +10,11 @@ import logging
 from pathlib import Path
 
 from correlation_lib.enricher import Enricher
-from correlation_lib.interfaces import RecallBackend, ContextBackend, EffectivenessStore
+from correlation_lib.interfaces import ContextBackend, EffectivenessStore, RecallBackend
 from correlation_lib.lifecycle import LifecycleManager
-from correlation_lib.matcher import Matcher
 from correlation_lib.rule_provider import FileRuleProvider
 from correlation_lib.rules import RuleSet
-from correlation_lib.tracker import SQLiteEffectivenessStore, EffectivenessTracker
-
+from correlation_lib.tracker import EffectivenessTracker, SQLiteEffectivenessStore
 
 logger = logging.getLogger(__name__)
 

@@ -1,11 +1,16 @@
 """Tests for correlation_lib.tracker."""
 
-import pytest
-from pathlib import Path
 import tempfile
+from pathlib import Path
+
+import pytest
 
 from correlation_lib.rules import LifecycleState
-from correlation_lib.tracker import SQLiteEffectivenessStore, EffectivenessTracker, RuleStats
+from correlation_lib.tracker import (
+    EffectivenessTracker,
+    RuleStats,
+    SQLiteEffectivenessStore,
+)
 
 
 class TestSQLiteEffectivenessStore:

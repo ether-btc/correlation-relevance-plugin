@@ -1,6 +1,11 @@
 """Protocol definitions for correlation engine adapters."""
 
-from typing import Protocol, runtime_checkable
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Protocol, runtime_checkable
+
+if TYPE_CHECKING:
+    from correlation_lib.rules import CorrelationRule
 
 
 @runtime_checkable

@@ -1,13 +1,11 @@
 """Tests for correlation_lib.enricher."""
 
-import pytest
 import tempfile
 from pathlib import Path
 
-from correlation_lib.rules import CorrelationRule, RuleSet, LifecycleState
-from correlation_lib.matcher import Matcher
-from correlation_lib.tracker import SQLiteEffectivenessStore, EffectivenessTracker
-from correlation_lib.enricher import Enricher, EnrichmentResult
+from correlation_lib.enricher import Enricher
+from correlation_lib.rules import CorrelationRule, RuleSet
+from correlation_lib.tracker import EffectivenessTracker, SQLiteEffectivenessStore
 
 
 class MockRecall:

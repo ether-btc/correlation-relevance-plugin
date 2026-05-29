@@ -4,12 +4,10 @@ import pytest
 
 from correlation_lib.rules import (
     CorrelationRule,
-    RuleSet,
     LifecycleState,
     MatchMode,
+    RuleSet,
     load_rules_from_json,
-    load_rules_from_file,
-    RELATIONSHIP_TYPES,
 )
 
 

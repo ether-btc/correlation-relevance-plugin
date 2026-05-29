@@ -10,13 +10,13 @@ import logging
 from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
-from correlation_lib.interfaces import RecallBackend, ContextBackend
+from correlation_lib.interfaces import ContextBackend, RecallBackend
 from correlation_lib.matcher import Matcher, MatchResult
-from correlation_lib.rules import RuleSet, CorrelationRule
+from correlation_lib.rules import CorrelationRule, RuleSet
 from correlation_lib.tracker import EffectivenessTracker
 
 if TYPE_CHECKING:
-    from correlation_lib.lifecycle import LifecycleManager
+    pass
 
 logger = logging.getLogger(__name__)
 

@@ -2,12 +2,11 @@
 
 from __future__ import annotations
 
-import re
 import logging
+import re
 from dataclasses import dataclass
 
 from correlation_lib.rules import CorrelationRule, MatchMode, RuleSet
-
 
 logger = logging.getLogger(__name__)
 
