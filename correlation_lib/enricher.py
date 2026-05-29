@@ -86,6 +86,14 @@ class Enricher:
         min_confidence: float,
     ) -> EnrichmentResult:
         """Internal enrichment pipeline."""
+        if not task_text or not task_text.strip():
+            return EnrichmentResult(
+                task_text=task_text or "",
+                fired_rules=[],
+                injected_count=0,
+                skipped_count=0,
+                errors=["task_text is empty or None — skipping enrichment"],
+            )
         errors: list[str] = []
         injected_count = 0
         skipped_count = 0
@@ -173,7 +181,7 @@ class Enricher:
             second_word = words[1].lower().rstrip(".,!?")
             if first_word.endswith(("e", "es", "ing")) and len(first_word) > 3:
                 # Looks like a verb (e.g., "running", "fixes", "made")
-                if second_word.endswith(noun_suffixes) or second_word[0].islower():
+                if second_word.endswith(noun_suffixes) or (second_word and second_word[0].islower()):
                     return True
 
         return False

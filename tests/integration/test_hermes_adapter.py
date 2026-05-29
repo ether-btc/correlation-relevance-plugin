@@ -8,69 +8,16 @@ simulates the Hermes lifecycle hooks.
 from __future__ import annotations
 
 import json  # noqa: E402
-import sys  # noqa: E402
 import tempfile
 from pathlib import Path
 
 import yaml
 
-# Mock Hermes Agent dependencies
-# MUST be set up before importing CorrelationMemoryProvider
-
-
-class MockMemoryProvider:
-    """Mock base class for MemoryProvider."""
-    name = "mock"
-
-    def is_available(self) -> bool:
-        return True
-
-    def initialize(self, session_id: str, **kwargs) -> None:
-        pass
-
-    def system_prompt_block(self) -> str:
-        return ""
-
-    def prefetch(self, query: str, *, session_id: str = "") -> str:
-        return ""
-
-    def on_turn_start(self, turn_number: int, message: str, **kwargs) -> None:
-        pass
-
-    def sync_turn(self, user_content: str, assistant_content: str, *, session_id: str = "") -> None:
-        pass
-
-    def shutdown(self) -> None:
-        pass
-
-    def get_config_schema(self) -> list:
-        return []
-
-
-# Create a proper module hierarchy
-hermes_agent = type(sys)('hermes_agent')
-hermes_constants = type(sys)('hermes_constants')
-
-hermes_constants.get_hermes_home = lambda: Path.home()
-
-agent = type(sys)('agent')
-memory_provider_module = type(sys)('memory_provider')
-
-memory_provider_module.MemoryProvider = MockMemoryProvider
-agent.memory_provider = memory_provider_module
-hermes_agent.agent = agent
-hermes_agent.hermes_constants = hermes_constants
-
-sys.modules['hermes_agent'] = hermes_agent
-sys.modules['hermes_agent.agent'] = agent
-sys.modules['hermes_agent.agent.memory_provider'] = memory_provider_module
-sys.modules['hermes_agent.hermes_constants'] = hermes_constants
-
-# Now import the adapter
+# Import from fixture - sets up mock modules before CorrelationMemoryProvider
 from correlation_lib_adapters.hermes import CorrelationMemoryProvider  # noqa: E402
 
 
-def test_memory_provider_basic():
+def test_memory_provider_basic(hermes_mock_modules):
     """Test basic MemoryProvider lifecycle."""
     print("TEST: Memory Provider Basic Lifecycle")
 
@@ -123,7 +70,7 @@ def test_memory_provider_basic():
     print("  PASSED\n")
 
 
-def test_memory_provider_config():
+def test_memory_provider_config(hermes_mock_modules):
     """Test configuration loading."""
     print("TEST: Memory Provider Configuration")
 
@@ -163,7 +110,7 @@ def test_memory_provider_config():
     print("  PASSED\n")
 
 
-def test_config_schema():
+def test_config_schema(hermes_mock_modules):
     """Test config schema."""
     print("TEST: Config Schema")
 
@@ -183,22 +130,25 @@ def test_config_schema():
     print("  PASSED\n")
 
 
-def test_error_handling():
+def test_error_handling(hermes_mock_modules):
     """Test error handling."""
     print("TEST: Error Handling")
 
-    provider = CorrelationMemoryProvider()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        tmpdir = Path(tmpdir)
 
-    # Initialize without config (should not crash)
-    provider.initialize(session_id="test-session")
+        provider = CorrelationMemoryProvider()
 
-    # Operations should be safe even without engine
-    provider.prefetch("test", session_id="test-session")
-    provider.on_turn_start(1, "test", session_id="test-session")
-    block = provider.system_prompt_block()
-    assert block == "", "System prompt should be empty without engine"
+        # Initialize with isolated tempdir as hermes_home
+        provider.initialize(session_id="test-session", hermes_home=str(tmpdir))
 
-    provider.shutdown()
+        # Operations should be safe even without engine
+        provider.prefetch("test", session_id="test-session")
+        provider.on_turn_start(1, "test", session_id="test-session")
+        block = provider.system_prompt_block()
+        assert block == "", "System prompt should be empty without engine"
+
+        provider.shutdown()
 
     print("  PASSED\n")
 
@@ -210,10 +160,10 @@ def main():
     print()
 
     try:
-        test_memory_provider_basic()
-        test_memory_provider_config()
-        test_config_schema()
-        test_error_handling()
+        test_memory_provider_basic(hermes_mock_modules=None)
+        test_memory_provider_config(hermes_mock_modules=None)
+        test_config_schema(hermes_mock_modules=None)
+        test_error_handling(hermes_mock_modules=None)
 
         print("="*60)
         print("ALL TESTS PASSED")

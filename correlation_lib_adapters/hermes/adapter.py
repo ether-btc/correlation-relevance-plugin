@@ -91,6 +91,9 @@ class CorrelationMemoryProvider(MemoryProvider):
 
         hermes_home = kwargs.get("hermes_home") or str(get_hermes_home())
 
+        # Check for correlation_rules_file kwarg override
+        correlation_rules_file = kwargs.get("correlation_rules_file")
+
         # Load correlation config
         import yaml
         config_path = Path(hermes_home) / "config.yaml"
@@ -110,6 +113,10 @@ class CorrelationMemoryProvider(MemoryProvider):
             if db_path_str:
                 db_path = Path(db_path_str).expanduser()
 
+        # Apply correlation_rules_file kwarg override if provided
+        if correlation_rules_file:
+            rule_file = Path(correlation_rules_file).expanduser()
+
         # Create engine
         try:
             self._engine = create_engine(
@@ -128,6 +135,7 @@ class CorrelationMemoryProvider(MemoryProvider):
             )
         except Exception as exc:
             logger.error("Failed to initialize correlation engine: %s", exc)
+            logger.debug("Correlation engine init details", exc_info=True)
             self._engine = None
 
     def system_prompt_block(self) -> str:

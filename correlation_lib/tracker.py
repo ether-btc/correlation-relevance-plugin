@@ -88,6 +88,9 @@ class SQLiteEffectivenessStore(EffectivenessStore):
     def record_relevance(self, rule_id: str, is_relevant: bool) -> None:
         now = datetime.now(timezone.utc).isoformat()
         col = "relevance_count" if is_relevant else "irrelevance_count"
+        # Defensive: col is constrained to only these two; validate to prevent injection
+        if col not in ("relevance_count", "irrelevance_count"):
+            raise ValueError(f"Invalid column name: {col}")
         with sqlite3.connect(self._db_path) as conn:
             conn.execute(
                 f"""
@@ -110,7 +113,6 @@ class SQLiteEffectivenessStore(EffectivenessStore):
             cols = ["rule_id", "firing_count", "relevance_count", "irrelevance_count",
                     "last_fired", "last_relevance_recorded", "current_state"]
             return dict(zip(cols, row))
-        return {}
 
     def get_all_stats(self) -> dict[str, dict]:
         with sqlite3.connect(self._db_path) as conn:

@@ -6,6 +6,7 @@ from typing import TYPE_CHECKING, Protocol, runtime_checkable
 
 if TYPE_CHECKING:
     from correlation_lib.rules import CorrelationRule
+    from correlation_lib.lifecycle import LifecycleState
 
 
 @runtime_checkable
@@ -66,4 +67,22 @@ class EffectivenessStore(Protocol):
 
     def get_all_stats(self) -> dict[str, dict]:
         """Return effectiveness stats for all rules."""
+        ...
+
+    def update_state(self, rule_id: str, state: "LifecycleState") -> None:
+        """Update the tracked lifecycle state for a rule.
+
+        Used by the lifecycle autoloop to persist state transitions.
+        """
+        ...
+
+    def log_lifecycle(
+        self,
+        rule_id: str,
+        from_state: "LifecycleState",
+        to_state: "LifecycleState",
+        reason: str,
+        triggered_by: str,
+    ) -> None:
+        """Log a lifecycle state transition."""
         ...

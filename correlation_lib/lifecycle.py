@@ -82,9 +82,6 @@ class LifecycleManager:
                 reason = f"auto: firing_count({firing_count}) >= {AUTO_PROMOTE_FIRE_THRESHOLD} AND effectiveness_ratio({effectiveness_ratio:.2f}) >= {AUTO_PROMOTE_EFFECTIVENESS_RATIO}"
 
         # Demotion path (checked independently, not in the same elif chain)
-        elif current in (LifecycleState.TESTING, LifecycleState.VALIDATED, LifecycleState.PROMOTED):
-            pass  # fall through to demote checks below
-
         # Demotion: step demote OR hard demote (both as independent if-branches,
         # not elif — when both conditions are met, hard demote takes precedence)
         if (

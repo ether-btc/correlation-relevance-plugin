@@ -15,6 +15,7 @@ from correlation_lib.lifecycle import LifecycleManager
 from correlation_lib.rule_provider import FileRuleProvider
 from correlation_lib.rules import RuleSet
 from correlation_lib.tracker import EffectivenessTracker, SQLiteEffectivenessStore
+from correlation_lib.lifecycle import LifecycleManager, LifecycleState
 
 logger = logging.getLogger(__name__)
 
@@ -82,7 +83,7 @@ class CorrelationEngine:
     def evaluate_lifecycles(self, ruleset: RuleSet) -> None:
         """Run lifecycle evaluation on all tracked rules.
 
-        Called periodically or after攒计 significant firing_count changes.
+        Called periodically or after significant firing_count changes.
         Q1=A: fully automated — no human intervention required.
         """
         all_stats = self._tracker.get_all_stats()

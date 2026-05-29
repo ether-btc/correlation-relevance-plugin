@@ -128,7 +128,7 @@ class RuleSet:
     """A collection of correlation rules with validation."""
 
     rules: list[CorrelationRule] = field(default_factory=list)
-    _keyword_index: dict[str, set[int]] = field(default_factory=list, repr=False)
+    _keyword_index: dict[str, set[int]] = field(default_factory=dict, repr=False)
 
     def __post_init__(self) -> None:
         # Build keyword index for fast lookup
@@ -169,20 +169,72 @@ class RuleSet:
 
 def load_rules_from_json(data: list[dict[str, Any]]) -> RuleSet:
     """Load rules from JSON-serializable list of dicts."""
+    required_fields = ("id", "trigger_context", "trigger_keywords",
+                       "must_also_fetch", "relationship_type", "confidence")
     rules: list[CorrelationRule] = []
-    for item in data:
+    for idx, item in enumerate(data):
+        rule_id = item.get("id", f"<item {idx}>")
+        for field in required_fields:
+            if field not in item:
+                raise ValueError(
+                    f"Rule '{rule_id}' (index {idx}): missing required field '{field}'. "
+                    f"Required fields: {required_fields}"
+                )
+
+        # Validate keyword arrays are non-empty
+        for field in ("trigger_keywords", "must_also_fetch"):
+            val = item[field]
+            if not isinstance(val, (list, tuple)) or len(val) == 0:
+                raise ValueError(
+                    f"Rule '{rule_id}': '{field}' must be a non-empty list; "
+                    f"got {type(val).__name__} of length {len(val) if isinstance(val, (list, tuple)) else 'N/A'}"
+                )
+
+        # Clamp and validate confidence
+        try:
+            confidence = float(item["confidence"])
+        except (TypeError, ValueError) as exc:
+            raise ValueError(
+                f"Rule '{rule_id}': 'confidence' must be a number; got {type(item['confidence']).__name__}: {exc}"
+            ) from exc
+        confidence = max(0.0, min(1.0, confidence))
+
+        # Validate relationship_type
+        rel_type = str(item["relationship_type"])
+        if rel_type not in RELATIONSHIP_TYPES:
+            raise ValueError(
+                f"Rule '{rule_id}': 'relationship_type' must be one of {list(RELATIONSHIP_TYPES)}; "
+                f"got '{rel_type}'"
+            )
+
         state_str = (item.get("lifecycle") or {}).get("state", "proposal")
+        try:
+            lifecycle_state = LifecycleState(state_str)
+        except ValueError as exc:
+            valid_states = [s.value for s in LifecycleState]
+            raise ValueError(
+                f"Rule '{rule_id}': 'lifecycle.state' must be one of {valid_states}; got '{state_str}'"
+            ) from exc
+
         match_mode_str = item.get("match_mode", "auto")
+        try:
+            match_mode = MatchMode(match_mode_str)
+        except ValueError:
+            raise ValueError(
+                f"Rule '{rule_id}': 'match_mode' must be one of {[m.value for m in MatchMode]}; "
+                f"got '{match_mode_str}'"
+            ) from exc
+
         rules.append(
             CorrelationRule(
                 id=str(item["id"]),
                 trigger_context=str(item["trigger_context"]),
                 trigger_keywords=tuple(item["trigger_keywords"]),
                 must_also_fetch=tuple(item["must_also_fetch"]),
-                relationship_type=str(item["relationship_type"]),
-                confidence=float(item["confidence"]),
-                match_mode=MatchMode(match_mode_str),
-                lifecycle_state=LifecycleState(state_str),
+                relationship_type=rel_type,
+                confidence=confidence,
+                match_mode=match_mode,
+                lifecycle_state=lifecycle_state,
                 learned_from=item.get("learned_from"),
                 description=item.get("description"),
             )
