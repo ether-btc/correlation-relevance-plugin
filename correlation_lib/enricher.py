@@ -17,8 +17,12 @@ from correlation_lib.tracker import EffectivenessTracker
 
 if TYPE_CHECKING:
     pass
-
 logger = logging.getLogger(__name__)
+
+# Maximum length of task_text accepted by the enrichment pipeline. A user-supplied
+# message larger than this is truncated with a warning to prevent DoS via
+# O(n) regex work and O(n) memory allocation in the matcher.
+TASK_TEXT_MAX_LEN = 65536  # 64 KiB
 
 
 @dataclass
@@ -94,6 +98,12 @@ class Enricher:
                 skipped_count=0,
                 errors=["task_text is empty or None — skipping enrichment"],
             )
+        if len(task_text) > TASK_TEXT_MAX_LEN:
+            logger.warning(
+                "task_text length %d exceeds cap %d — truncating",
+                len(task_text), TASK_TEXT_MAX_LEN,
+            )
+            task_text = task_text[:TASK_TEXT_MAX_LEN]
         errors: list[str] = []
         injected_count = 0
         skipped_count = 0
