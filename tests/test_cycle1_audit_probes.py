@@ -10,21 +10,21 @@ Probes:
   P4: tracker.py:91-93 — dead defensive allowlist check (cosmetic, observe-only)
 
 Run from the project root:
-    python3 -m pytest tests/cycle1-probes.py -v --no-header --tb=short
+    python3 -m pytest tests/test_cycle1_audit_probes.py -v --no-header --tb=short
 """
 from __future__ import annotations
 
-import json
-import os
+import sqlite3
 import sys
-import tempfile
 from pathlib import Path
-from unittest.mock import patch
 
 import pytest
 
-PROJECT_ROOT = Path("/home/hermes-pi/projects/correlation-relevance-plugin")
-sys.path.insert(0, str(PROJECT_ROOT))
+# Add project root to sys.path so `correlation_lib` is importable when running
+# from any directory (CI, dev shell, IDE).
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 from correlation_lib.engine import CorrelationEngine
 from correlation_lib.rules import (

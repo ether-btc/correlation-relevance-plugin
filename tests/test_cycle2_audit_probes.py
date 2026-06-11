@@ -12,10 +12,16 @@ from __future__ import annotations
 
 import json
 import logging
-import sqlite3
+import sys
 from pathlib import Path
 
 import pytest
+
+# Add project root to sys.path so `correlation_lib` is importable when running
+# from any directory (CI, dev shell, IDE).
+PROJECT_ROOT = Path(__file__).parent.parent.resolve()
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 
 
 # ──────────────────────────────────────────────────────────────────────────

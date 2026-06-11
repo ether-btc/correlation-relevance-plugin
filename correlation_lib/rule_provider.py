@@ -6,6 +6,7 @@ When enabled, uses mtime polling to detect changes.
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 
@@ -48,10 +49,9 @@ class FileRuleProvider(RuleProvider):
           errors that the caller MUST see and fix — silently turning them
           into "0 rules loaded" hides broken configuration.
         """
-        import json as _json
         try:
             self._ruleset = load_rules_from_file(self._rule_file)
-        except (OSError, _json.JSONDecodeError) as exc:
+        except (OSError, json.JSONDecodeError) as exc:
             # OSError covers FileNotFoundError, PermissionError, etc.
             # JSONDecodeError is a subclass of ValueError but means "the file
             # exists but isn't valid JSON" — same severity as missing.
