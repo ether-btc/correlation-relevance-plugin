@@ -37,16 +37,44 @@ class FileRuleProvider(RuleProvider):
         self._load()
 
     def _load(self) -> None:
-        """Load rules from file, building keyword index."""
+        """Load rules from file, building keyword index.
+
+        Error policy:
+        - OSError (file missing, permission denied, transient I/O): warn and
+          fall back to an empty ruleset so the engine can run in degraded mode.
+          A missing rules file is a normal first-run / deployment state.
+        - ValueError, json.JSONDecodeError (config errors: file too large,
+          schema violation, not a JSON array): re-raise. These are programming
+          errors that the caller MUST see and fix — silently turning them
+          into "0 rules loaded" hides broken configuration.
+        """
+        import json as _json
         try:
             self._ruleset = load_rules_from_file(self._rule_file)
+        except (OSError, _json.JSONDecodeError) as exc:
+            # OSError covers FileNotFoundError, PermissionError, etc.
+            # JSONDecodeError is a subclass of ValueError but means "the file
+            # exists but isn't valid JSON" — same severity as missing.
+            # NOTE: we catch JSONDecodeError here too so a truncated file
+            # doesn't crash the engine. load_rules_from_file only raises
+            # ValueError for size cap and schema errors.
+            logger.warning(
+                "Cannot read rules file %s: %s — running with empty ruleset",
+                self._rule_file, exc,
+            )
+            self._ruleset = RuleSet()
+            return
+        # ValueError re-raises: caller sees the actual config error
+        # (size cap rejection, schema validation failure, etc.)
+
+        try:
             stat = self._rule_file.stat()
             self._last_mtime = stat.st_mtime
             self._last_size = stat.st_size
-            logger.info("Loaded %d rules from %s", len(self._ruleset.rules), self._rule_file)
-        except Exception as exc:
-            logger.error("Failed to load rules from %s: %s", self._rule_file, exc)
-            self._ruleset = RuleSet()
+        except OSError as exc:
+            logger.warning("Cannot stat rules file %s: %s", self._rule_file, exc)
+
+        logger.info("Loaded %d rules from %s", len(self._ruleset.rules), self._rule_file)
 
     def _needs_reload(self) -> bool:
         """Check if file has changed since last load."""
