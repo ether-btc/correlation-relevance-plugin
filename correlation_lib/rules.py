@@ -242,8 +242,25 @@ def load_rules_from_json(data: list[dict[str, Any]]) -> RuleSet:
     return RuleSet(rules)
 
 
+# Maximum size (bytes) of a rules JSON file that load_rules_from_file will read.
+# A file larger than this is rejected before json.load() to prevent memory
+# exhaustion from a large file or a JSON-bomb (deeply nested arrays).
+RULES_FILE_MAX_BYTES = 10 * 1024 * 1024  # 10 MiB
+
+
 def load_rules_from_file(path: str | Path) -> RuleSet:
-    """Load rules from a JSON file."""
+    """Load rules from a JSON file.
+
+    Refuses to read files larger than RULES_FILE_MAX_BYTES to prevent DoS.
+    The per-rule validation in load_rules_from_json still runs after read.
+    """
+    path = Path(path)
+    size = path.stat().st_size
+    if size > RULES_FILE_MAX_BYTES:
+        raise ValueError(
+            f"Rules file too large: {size:,} bytes exceeds {RULES_FILE_MAX_BYTES:,} "
+            f"byte cap (RULES_FILE_MAX_BYTES). Refusing to load."
+        )
     with open(path) as f:
         data = json.load(f)
     if not isinstance(data, list):
