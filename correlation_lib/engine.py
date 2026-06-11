@@ -99,6 +99,11 @@ class CorrelationEngine:
                 effectiveness_ratio=stats.effectiveness_ratio,
             )
             if new_state:
+                # Capture the pre-mutation state — the in-place setattr on the
+                # next line mutates rule.lifecycle_state, so we must read it
+                # before that mutation or log_lifecycle records the wrong
+                # from_state (which equals the to_state).
+                prev_state = rule.lifecycle_state
                 # Update rule in ruleset
                 for r in ruleset.rules:
                     if r.id == rule.id:
@@ -108,7 +113,7 @@ class CorrelationEngine:
                 # Log to lifecycle log
                 self._tracker._store.log_lifecycle(  # type: ignore
                     rule.id,
-                    rule.lifecycle_state,
+                    prev_state,
                     new_state,
                     f"auto: firing_count={stats.firing_count}, eff_ratio={stats.effectiveness_ratio:.3f}",
                     "auto",
