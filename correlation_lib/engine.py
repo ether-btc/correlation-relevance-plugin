@@ -7,6 +7,7 @@ Target: <100 LoC.
 from __future__ import annotations
 
 import logging
+import threading
 from pathlib import Path
 
 from correlation_lib.enricher import Enricher
@@ -59,6 +60,18 @@ class CorrelationEngine:
         else:
             logger.warning("Engine initialized without backends — enrichment disabled")
 
+        # Lifecycle lock — evaluate_lifecycles mutates ruleset.rules[*]
+        # .lifecycle_state in-place and writes to the SQLite lifecycle log.
+        # Concurrent calls (e.g., from multiple threads/tasks) race on the
+        # in-place state mutation: another thread's update can be observed
+        # as the "from_state" in the log row, producing corrupted audit
+        # trail entries. The C1-F1 fix (capture prev_state before setattr)
+        # is correct for single-threaded use; this lock makes the
+        # mutation + log write atomic across threads.
+        # See: tests/test_phase_b_audit_probes.py::TestThreadSafety
+        #      and issue #2 from 2026-05-29 prior audit.
+        self._lifecycle_lock = threading.RLock()
+
     @property
     def enricher(self) -> Enricher | None:
         return self._enricher
@@ -85,39 +98,60 @@ class CorrelationEngine:
 
         Called periodically or after significant firing_count changes.
         Q1=A: fully automated — no human intervention required.
+
+        Thread-safety: this method mutates rule.lifecycle_state in-place
+        and writes to the SQLite lifecycle log. A threading.RLock
+        (self._lifecycle_lock) serializes the capture-from-state /
+        mutate / write-log sequence so concurrent calls produce
+        consistent audit trail entries. Single-threaded callers are
+        unaffected (lock acquisition is uncontended).
         """
-        all_stats = self._tracker.get_all_stats()
-        for rule in ruleset.get_active_rules():
-            if not self._lifecycle_manager.can_advance(rule):
-                continue
-            stats = all_stats.get(rule.id)
-            if not stats:
-                continue
-            new_state = self._lifecycle_manager.evaluate(
-                rule,
-                firing_count=stats.firing_count,
-                effectiveness_ratio=stats.effectiveness_ratio,
-            )
-            if new_state:
-                # Capture the pre-mutation state — the in-place setattr on the
-                # next line mutates rule.lifecycle_state, so we must read it
-                # before that mutation or log_lifecycle records the wrong
-                # from_state (which equals the to_state).
-                prev_state = rule.lifecycle_state
-                # Update rule in ruleset
-                for r in ruleset.rules:
-                    if r.id == rule.id:
-                        object.__setattr__(r, "lifecycle_state", new_state)
-                # Update store
-                self._tracker._store.update_state(rule.id, new_state)  # type: ignore
-                # Log to lifecycle log
-                self._tracker._store.log_lifecycle(  # type: ignore
-                    rule.id,
-                    prev_state,
-                    new_state,
-                    f"auto: firing_count={stats.firing_count}, eff_ratio={stats.effectiveness_ratio:.3f}",
-                    "auto",
+        with self._lifecycle_lock:
+            all_stats = self._tracker.get_all_stats()
+            for rule in ruleset.get_active_rules():
+                if not self._lifecycle_manager.can_advance(rule):
+                    continue
+                stats = all_stats.get(rule.id)
+                if not stats:
+                    continue
+                new_state = self._lifecycle_manager.evaluate(
+                    rule,
+                    firing_count=stats.firing_count,
+                    effectiveness_ratio=stats.effectiveness_ratio,
                 )
+                if new_state:
+                    # Capture the pre-mutation state — the in-place setattr on the
+                    # next line mutates rule.lifecycle_state, so we must read it
+                    # before that mutation or log_lifecycle records the wrong
+                    # from_state (which equals the to_state).
+                    prev_state = rule.lifecycle_state
+                    # Use the manager's specific reason if available (e.g.,
+                    # "hard demote: firing_count(100) >= 90 AND
+                    # effectiveness_ratio(0.10) < 0.20"). Fall back to a
+                    # generic reason if the manager did not record one
+                    # (defense-in-depth; the manager always records a
+                    # reason on a successful transition, but a future
+                    # refactor could change that).
+                    reason = self._lifecycle_manager.last_reason_for(rule.id)
+                    if reason is None:
+                        reason = (
+                            f"auto: firing_count={stats.firing_count}, "
+                            f"eff_ratio={stats.effectiveness_ratio:.3f}"
+                        )
+                    # Update rule in ruleset
+                    for r in ruleset.rules:
+                        if r.id == rule.id:
+                            object.__setattr__(r, "lifecycle_state", new_state)
+                    # Update store
+                    self._tracker._store.update_state(rule.id, new_state)  # type: ignore
+                    # Log to lifecycle log
+                    self._tracker._store.log_lifecycle(  # type: ignore
+                        rule.id,
+                        prev_state,
+                        new_state,
+                        reason,
+                        "auto",
+                    )
 
 
 def create_engine(
