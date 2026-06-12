@@ -3,10 +3,19 @@
 from __future__ import annotations
 
 import json
+import re
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
 from typing import Any
+
+
+# Enforced rule ID pattern (matches RULE_SCHEMA["properties"]["id"]["pattern"]).
+# IDs must start with a lowercase letter and contain only lowercase letters,
+# digits, underscores, and hyphens. This is a user-facing identifier used in
+# SQLite keys, log rows, and CLI output — strict format prevents ambiguity
+# and SQL-key confusion (issue #4 from 2026-05-29 prior audit).
+RULE_ID_PATTERN = re.compile(r"^[a-z][a-z0-9_-]*$")
 
 
 class LifecycleState(Enum):
@@ -23,7 +32,13 @@ class LifecycleState(Enum):
         allowed = {
             LifecycleState.PROPOSAL: {LifecycleState.TESTING},
             LifecycleState.TESTING: {LifecycleState.VALIDATED, LifecycleState.PROPOSAL},
-            LifecycleState.VALIDATED: {LifecycleState.PROMOTED, LifecycleState.TESTING},
+            # VALIDATED: {PROMOTED, TESTING, PROPOSAL} — hard demote (PROMOTED → PROPOSAL
+            # analog) added so a VALIDATED rule that performs terribly can be sent
+            # all the way back to PROPOSAL by the manager's hard-demote path. Without
+            # this entry, LifecycleManager.evaluate returns None for the hard demote
+            # case (can_transition_to rejects the override), defeating the override
+            # mechanism for VALIDATED rules. Discovered via probe C.8.
+            LifecycleState.VALIDATED: {LifecycleState.PROMOTED, LifecycleState.TESTING, LifecycleState.PROPOSAL},
             LifecycleState.PROMOTED: {LifecycleState.RETIRED, LifecycleState.VALIDATED, LifecycleState.PROPOSAL},
             LifecycleState.RETIRED: set(),
         }
@@ -180,6 +195,15 @@ def load_rules_from_json(data: list[dict[str, Any]]) -> RuleSet:
                     f"Rule '{rule_id}' (index {idx}): missing required field '{field}'. "
                     f"Required fields: {required_fields}"
                 )
+
+        # Validate rule ID format (issue #4 fix: enforce the schema-documented
+        # pattern at load time, not just in the docstring).
+        if not isinstance(rule_id, str) or not RULE_ID_PATTERN.match(rule_id):
+            raise ValueError(
+                f"Rule (index {idx}): 'id' must match pattern ^[a-z][a-z0-9_-]*$ "
+                f"(start with a lowercase letter; lowercase letters, digits, "
+                f"underscores, and hyphens only); got {rule_id!r}"
+            )
 
         # Validate keyword arrays are non-empty
         for field in ("trigger_keywords", "must_also_fetch"):
