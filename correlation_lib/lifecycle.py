@@ -133,3 +133,19 @@ class LifecycleManager:
             LifecycleState.RETIRED,
             LifecycleState.PROPOSAL,  # proposals need manual activation
         )
+
+    def last_reason_for(self, rule_id: str) -> str | None:
+        """Return the reason recorded for the most recent transition
+        of the given rule_id, or None if no transition has been recorded.
+
+        The engine calls this after a successful evaluate() to preserve
+        the manager's specific reason string ('hard demote ...',
+        'auto: firing_count ... >= ... AND effectiveness_ratio ...',
+        etc.) in the SQLite lifecycle_log table. Without this, the
+        engine's generic "firing_count=X, eff_ratio=Y" reason overwrites
+        the manager's specific reason in the audit trail.
+        """
+        for transition in reversed(self._transitions):
+            if transition.rule_id == rule_id:
+                return transition.reason
+        return None
