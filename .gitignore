@@ -54,3 +54,5 @@ Thumbs.db
 *.tmp          # temp files
 .hermes/       # local hermes home (may contain secrets)
 state.md       # personal working notes
+# Local session notes (canonical: wiki + memory)
+.planning/
