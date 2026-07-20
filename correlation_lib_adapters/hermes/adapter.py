@@ -70,6 +70,31 @@ class CorrelationMemoryProvider(MemoryProvider):
         self._recall = HermesRecallBackend()
         self._context = HermesContextBackend()
         self._turn_count = 0
+        self._last_init_error: str | None = None
+
+    @property
+    def is_healthy(self) -> bool:
+        """Whether the correlation engine initialized successfully.
+
+        Returns ``False`` when ``initialize()`` either was never called or
+        caught an exception (the engine was set to ``None``). Callers can
+        use this for health checks / degraded-mode warnings without
+        scraping logs.
+
+        See: https://github.com/ether-btc/correlation-relevance-plugin/issues/1
+        """
+        return self._engine is not None
+
+    @property
+    def last_init_error(self) -> str | None:
+        """The repr of the last exception swallowed by ``initialize()``,
+        or ``None`` if the engine is currently healthy or initialize()
+        has not been called.
+
+        Additive visibility for operators — complement to the existing
+        ERROR-level log. See issue #1.
+        """
+        return self._last_init_error
 
     # -- MemoryProvider implementation -----------------------------------------
 
@@ -129,6 +154,7 @@ class CorrelationMemoryProvider(MemoryProvider):
             # Wire Mnemosyne if available
             if "mnemosyne" in kwargs:
                 self._recall.set_mnemosyne(kwargs["mnemosyne"])
+            self._last_init_error = None  # success — clear any prior failure
             logger.info(
                 "CorrelationMemoryProvider initialized: rule_file=%s watch=%s db=%s",
                 rule_file, watch_enabled, db_path,
@@ -137,6 +163,7 @@ class CorrelationMemoryProvider(MemoryProvider):
             logger.error("Failed to initialize correlation engine: %s", exc)
             logger.debug("Correlation engine init details", exc_info=True)
             self._engine = None
+            self._last_init_error = repr(exc)
 
     def system_prompt_block(self) -> str:
         """Return static info about the correlation engine for system prompt."""
@@ -213,6 +240,7 @@ class CorrelationMemoryProvider(MemoryProvider):
         """Clean shutdown."""
         self._context.clear()
         self._engine = None
+        self._last_init_error = None
 
     def get_tool_schemas(self) -> list:
         """Return no tool schemas — correlation is a context-only provider."""

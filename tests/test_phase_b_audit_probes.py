@@ -151,13 +151,19 @@ class TestAdapterSilentInit:
                 for rec in caplog.records
             ), f"Expected ERROR log, got: {[r.message for r in caplog.records]}"
 
-            # The bug claim: no programmatic visibility for the caller.
+            # The bug (#1) is now fixed: programmatic visibility for the caller.
             # Check: does the provider expose any way to know the init failed?
-            assert not hasattr(provider, "last_init_error"), (
-                "PROBE FAIL: provider exposes last_init_error — bug is fixed"
+            assert provider.is_healthy is False, (
+                "REGRESSION: provider.is_healthy should be False after init "
+                "failure but returned True"
             )
-            assert not hasattr(provider, "init_error"), (
-                "PROBE FAIL: provider exposes init_error — bug is fixed"
+            assert provider.last_init_error is not None, (
+                "REGRESSION: provider.last_init_error should be set after "
+                "init failure but is None"
+            )
+            assert "simulated engine init failure" in provider.last_init_error, (
+                f"REGRESSION: last_init_error should contain the failure "
+                f"reason, got {provider.last_init_error!r}"
             )
         finally:
             # Restore sys.modules
@@ -368,16 +374,16 @@ class TestAmbiguousNone:
             f"Expected both None, got A={result_a!r}, B={result_b!r}"
         )
 
-        # The probe documents that the caller's experience is identical.
-        # Fix would be: return a sentinel (NotFound, Misconfigured, etc.)
-        # or raise on misconfiguration. Out of scope for this audit —
-        # file as followup issue.
-
-        # The probe also checks: does the class expose a way to know
-        # the misconfiguration state?
-        assert not hasattr(backend_a, "is_configured") and not hasattr(
-            backend_b, "is_configured"
-        ), "Backend exposes is_configured — bug is fixed"
+        # The bug (#3) is now fixed: caller can distinguish via the
+        # is_configured property. Case A (no mnemosyne) is False; case B
+        # (mnemosyne wired) is True. fetch() still returns None in both,
+        # but callers can now disambiguate.
+        assert backend_a.is_configured is False, (
+            "REGRESSION: unconfigured backend should report is_configured == False"
+        )
+        assert backend_b.is_configured is True, (
+            "REGRESSION: configured backend should report is_configured == True"
+        )
 
 
 # ──────────────────────────────────────────────────────────────────────────
