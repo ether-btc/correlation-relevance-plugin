@@ -45,6 +45,19 @@ class HermesRecallBackend(RecallBackend):
     def __init__(self, mnemosyne: "Mnemosyne | None" = None) -> None:
         self._mnemosyne = mnemosyne
 
+    @property
+    def is_configured(self) -> bool:
+        """Whether a Mnemosyne instance is wired into this backend.
+
+        Callers can check this before calling :meth:`fetch` to
+        distinguish the "not configured" state (no Mnemosyne wired) from
+        the "not found in memory" state (Mnemosyne queried but no
+        match). The two cases previously returned identical ``None``.
+
+        See: https://github.com/ether-btc/correlation-relevance-plugin/issues/3
+        """
+        return self._mnemosyne is not None
+
     def set_mnemosyne(self, mnemosyne: "Mnemosyne") -> None:
         object.__setattr__(self, "_mnemosyne", mnemosyne)
 
