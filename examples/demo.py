@@ -28,9 +28,9 @@ class MockRecallBackend(RecallBackend):
             "Last successful backup: 2026-05-16 23:00 UTC. Retention: 30 days."
         ),
         "rollback-instructions": (
-            "To rollback: (1) stop service: sudo systemctl stop hermes "
-            "(2) restore: cp /backup/daily/config.yaml ~/.hermes/config.yaml "
-            "(3) restart: sudo systemctl start hermes"
+            "Rolling back: stop the service, restore yesterday's copy of the configuration "
+            "from the daily backup, then start the service again. Verify the gateway came up "
+            "before replaying traffic."
         ),
         "recent-incidents": (
             "2026-05-15: Database lock contention caused 2s latency spike. "

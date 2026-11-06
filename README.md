@@ -151,25 +151,56 @@ ruff check .
 pip install -e ".[hermes]"
 ```
 
-## Deployment — Hermes Agent
-
-Deploy this as a Hermes memory provider plugin:
+## Install as a Hermes plugin
 
 ```bash
-# Link the plugin into Hermes
-ln -sf /path/to/correlation-relevance-plugin/correlation_lib_adapters/hermes \
-  ~/.hermes/plugins/correlation
+# From a local checkout
+hermes plugins install /path/to/correlation-relevance-plugin
 
-# Add to ~/.hermes/config.yaml:
-# memory:
-#   provider: correlation
-#   correlation:
-#     rule_file: ~/.hermes/correlation-rules.json
-#     watch_enabled: false
-#     db_path: ~/.hermes/correlation-effectiveness.db
+# or, once this entry is in the catalog
+hermes plugins install correlation-relevance
 ```
 
-Restart Hermes Agent — the correlation engine will prefetch related context automatically on matched tasks.
+The plugin registers exactly one tool:
+
+```
+correlation_lookup(task_text, trigger_context=None, limit=5)
+```
+
+It reads your rule file (`$HERMES_CORRELATION_RULES`, else
+`~/.hermes/correlation-rules.json`) on every call, so editing rules needs no restart, and
+answers `{"rules_configured": false, "matched": []}` when no rule file exists yet — a fresh
+install never looks broken.
+
+Example — the model asks before it touches a service:
+
+```
+> correlation_lookup(task_text="modify the gateway config and restart it")
+
+{
+  "rules_configured": true,
+  "matched": [{
+    "rule_id": "cr-001",
+    "relationship_type": "constrains",
+    "must_also_fetch": ["backup-location", "rollback-instructions"],
+    "confidence": 0.95,
+    "score": 0.558,
+    "matched_keywords": ["config", "modify"]
+  }],
+  "count": 1
+}
+```
+
+What it does not do: no network, no writes, no model call, no background thread. It scores
+the text you give it against the rules you wrote.
+
+### Advanced: use the library as a memory provider
+
+`correlation_lib_adapters/hermes/adapter.py` still ships the older
+`CorrelationMemoryProvider`, which would occupy Hermes's single memory-provider slot. If you
+run a dedicated memory backend (Mnemosyne, Honcho, Mem0), do **not** enable it — use the
+plugin tool above instead, which is additive. The provider remains available for setups that
+have no memory provider and want correlation to be the one.
 
 ## Migrating from OpenClaw
 

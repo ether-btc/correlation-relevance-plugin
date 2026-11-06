@@ -1,0 +1,7 @@
+name: correlation-relevance
+version: 0.4.0
+description: "Correlation rules that surface the context you forgot to fetch: match the task you are about to do against your own rule file and get back the must-also-fetch hints (backup location, rollback runbook, incident history) before you act."
+author: ether-btc
+provides_tools:
+  - correlation_lookup
+provides_hooks: []
